@@ -25,10 +25,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: BlocProvider(
-        create: (context) => SearchCubit(repository: SearchRepository()),
-        child: const HomeScreen(),
-      ),
+      home: const HomeScreen(),
     );
   }
 }
