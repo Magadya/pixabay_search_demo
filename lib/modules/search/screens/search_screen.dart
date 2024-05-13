@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pull_to_refresh_flutter3/pull_to_refresh_flutter3.dart';
+import 'package:web_smooth_scroll/web_smooth_scroll.dart';
 
 import '../bloc/search_cubit.dart';
 import '../bloc/search_state.dart';
@@ -19,6 +21,7 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchQueryController = TextEditingController();
   final RefreshController _refreshController = RefreshController();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -77,80 +80,89 @@ class _SearchScreenState extends State<SearchScreen> {
                 : Column(
                     children: [
                       Expanded(
-                        child: SmartRefresher(
-                          controller: _refreshController,
-                          enablePullUp: true,
-                          footer: const LoadingFooter(),
-                          onRefresh: () {
-                            if (_refreshController.isRefresh) {
-                              context
-                                  .read<SearchCubit>()
-                                  .refreshList()
-                                  .then((_) => _refreshController.refreshCompleted());
-                            }
-                          },
-                          onLoading: () async {
-                            if (_refreshController.isLoading) {
-                              context.read<SearchCubit>().loadNextPage().then((_) => _refreshController.loadComplete());
-                            }
-                          },
-                          child: ListView.builder(
-                            itemCount: (state.images!.length / getColumnCount(context)).ceil(),
-                            itemBuilder: (BuildContext context, int rowIndex) {
-                              final startIndex = rowIndex * getColumnCount(context);
-                              final endIndex = (rowIndex + 1) * getColumnCount(context);
-                              final rowImages = state.images!.sublist(
-                                  startIndex, endIndex < state.images!.length ? endIndex : state.images!.length);
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 10.0),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                  children: rowImages.map((result) {
-                                    return GestureDetector(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          PageRouteBuilder(
-                                            transitionDuration: const Duration(milliseconds: 500),
-                                            pageBuilder: (_, __, ___) => DetailImageScreen(imageModel: result),
-                                            transitionsBuilder: (_, animation, __, child) {
-                                              return SlideTransition(
-                                                position: Tween<Offset>(
-                                                  begin: const Offset(1.0, 0.0), // from right to left
-                                                  end: Offset.zero,
-                                                ).animate(animation),
-                                                child: child,
-                                              );
-                                            },
+                        child: WebSmoothScroll(
+                          controller: _scrollController,
+                          scrollOffset: 100,
+                          animationDuration: 600,
+                          curve: Curves.easeInOutCirc,
+                          child: ScrollConfiguration(
+                            behavior:  ScrollConfiguration.of(context).copyWith(dragDevices: PointerDeviceKind.values.toSet()),
+                            child: SmartRefresher(
+                              controller: _refreshController,
+                              enablePullUp: true,
+                              footer: const LoadingFooter(),
+                              onRefresh: () {
+                                if (_refreshController.isRefresh) {
+                                  context
+                                      .read<SearchCubit>()
+                                      .refreshList()
+                                      .then((_) => _refreshController.refreshCompleted());
+                                }
+                              },
+                              onLoading: () async {
+                                if (_refreshController.isLoading) {
+                                  context.read<SearchCubit>().loadNextPage().then((_) => _refreshController.loadComplete());
+                                }
+                              },
+                              child: ListView.builder(
+                                itemCount: (state.images!.length / getColumnCount(context)).ceil(),
+                                itemBuilder: (BuildContext context, int rowIndex) {
+                                  final startIndex = rowIndex * getColumnCount(context);
+                                  final endIndex = (rowIndex + 1) * getColumnCount(context);
+                                  final rowImages = state.images!.sublist(
+                                      startIndex, endIndex < state.images!.length ? endIndex : state.images!.length);
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 10.0),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                      children: rowImages.map((result) {
+                                        return GestureDetector(
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              PageRouteBuilder(
+                                                transitionDuration: const Duration(milliseconds: 500),
+                                                pageBuilder: (_, __, ___) => DetailImageScreen(imageModel: result),
+                                                transitionsBuilder: (_, animation, __, child) {
+                                                  return SlideTransition(
+                                                    position: Tween<Offset>(
+                                                      begin: const Offset(1.0, 0.0), // from right to left
+                                                      end: Offset.zero,
+                                                    ).animate(animation),
+                                                    child: child,
+                                                  );
+                                                },
+                                              ),
+                                            );
+                                          },
+                                          child: SizedBox(
+                                            width: MediaQuery.of(context).size.width / getColumnCount(context),
+                                            height: MediaQuery.of(context).size.width / getColumnCount(context),
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Expanded(
+                                                  child: Container(
+                                                    width: 150,
+                                                    height: 150,
+                                                    child: Image.network(
+                                                      result.previewURL,
+                                                      fit: BoxFit.cover,
+                                                    ),
+                                                  ),
+                                                ),
+                                                Text('Views: ${result.views}'),
+                                                Text('Likes: ${result.likes}'),
+                                              ],
+                                            ),
                                           ),
                                         );
-                                      },
-                                      child: SizedBox(
-                                        width: MediaQuery.of(context).size.width / getColumnCount(context),
-                                        height: MediaQuery.of(context).size.width / getColumnCount(context),
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Expanded(
-                                              child: Container(
-                                                width: 150,
-                                                height: 150,
-                                                child: Image.network(
-                                                  result.previewURL,
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              ),
-                                            ),
-                                            Text('Views: ${result.views}'),
-                                            Text('Likes: ${result.likes}'),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              );
-                            },
+                                      }).toList(),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
                           ),
                         ),
                       ),
